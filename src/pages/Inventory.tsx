@@ -13,91 +13,105 @@ import {
   ChevronRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { categories, initialProducts, Product } from "@/data/products";
+import { AddProductDialog } from "@/components/inventory/AddProductDialog";
+import { FilterDialog, FilterOptions } from "@/components/inventory/FilterDialog";
+import { ExportDialog } from "@/components/inventory/ExportDialog";
+import { EditProductDialog } from "@/components/inventory/EditProductDialog";
+import { DeleteConfirmDialog } from "@/components/inventory/DeleteConfirmDialog";
+import { toast } from "sonner";
 
-const categories = ["All", "Dairy", "Bakery", "Produce", "Meat", "Dry Goods", "Beverages"];
-
-const products = [
-  { id: 1, name: "Whole Milk 1L", category: "Dairy", quantity: 145, expiry: "2024-02-15", status: "normal" },
-  { id: 2, name: "White Bread", category: "Bakery", quantity: 23, expiry: "2024-02-08", status: "low" },
-  { id: 3, name: "Free Range Eggs (12)", category: "Dairy", quantity: 8, expiry: "2024-02-20", status: "low" },
-  { id: 4, name: "Cheddar Cheese 500g", category: "Dairy", quantity: 67, expiry: "2024-03-01", status: "normal" },
-  { id: 5, name: "Greek Yogurt", category: "Dairy", quantity: 0, expiry: "2024-02-10", status: "out" },
-  { id: 6, name: "Organic Bananas", category: "Produce", quantity: 89, expiry: "2024-02-09", status: "normal" },
-  { id: 7, name: "Chicken Breast 1kg", category: "Meat", quantity: 34, expiry: "2024-02-11", status: "normal" },
-  { id: 8, name: "Olive Oil 500ml", category: "Dry Goods", quantity: 156, expiry: "2025-06-15", status: "normal" },
-  { id: 9, name: "Orange Juice 1L", category: "Beverages", quantity: 12, expiry: "2024-02-18", status: "low" },
-  { id: 10, name: "Butter 250g", category: "Dairy", quantity: 45, expiry: "2024-02-28", status: "normal" },
-];
+const ITEMS_PER_PAGE = 10;
 
 const Inventory = () => {
+  const [products, setProducts] = useState<Product[]>(initialProducts);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  
+  const [filters, setFilters] = useState<FilterOptions>({
+    stockStatus: [],
+    sortBy: "name",
+    sortOrder: "asc",
+  });
 
-  const filteredProducts = products.filter(product => {
+  let filteredProducts = products.filter(product => {
     const matchesCategory = selectedCategory === "All" || product.category === selectedCategory;
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
+    const matchesStatus = filters.stockStatus.length === 0 || filters.stockStatus.includes(product.status);
+    return matchesCategory && matchesSearch && matchesStatus;
   });
+
+  filteredProducts = [...filteredProducts].sort((a, b) => {
+    let comparison = 0;
+    switch (filters.sortBy) {
+      case "name": comparison = a.name.localeCompare(b.name); break;
+      case "quantity": comparison = a.quantity - b.quantity; break;
+      case "price": comparison = a.price - b.price; break;
+      case "expiry": comparison = new Date(a.expiry).getTime() - new Date(b.expiry).getTime(); break;
+      case "category": comparison = a.category.localeCompare(b.category); break;
+    }
+    return filters.sortOrder === "desc" ? -comparison : comparison;
+  });
+
+  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+  const paginatedProducts = filteredProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  const handleAddProduct = (newProduct: Omit<Product, "id" | "status">) => {
+    const id = Math.max(...products.map(p => p.id)) + 1;
+    let status: "normal" | "low" | "out" = newProduct.quantity === 0 ? "out" : newProduct.quantity < 20 ? "low" : "normal";
+    setProducts([...products, { ...newProduct, id, status }]);
+  };
+
+  const handleEditProduct = (updatedProduct: Product) => {
+    setProducts(products.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+  };
+
+  const handleDeleteProduct = () => {
+    if (selectedProduct) {
+      setProducts(products.filter(p => p.id !== selectedProduct.id));
+      setDeleteDialogOpen(false);
+      setSelectedProduct(null);
+      toast.success("Product deleted successfully!");
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "normal":
-        return <span className="badge-success">In Stock</span>;
-      case "low":
-        return <span className="badge-warning">Low Stock</span>;
-      case "out":
-        return <span className="badge-danger">Out of Stock</span>;
-      default:
-        return null;
+      case "normal": return <span className="badge-success">In Stock</span>;
+      case "low": return <span className="badge-warning">Low Stock</span>;
+      case "out": return <span className="badge-danger">Out of Stock</span>;
+      default: return null;
     }
   };
 
   return (
     <MainLayout title="Inventory" subtitle="Manage your product inventory">
-      {/* Actions Bar */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Search products..." 
-            className="pl-10"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+          <Input placeholder="Search products..." className="pl-10" value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} />
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
-            <Filter className="h-4 w-4 mr-2" />
-            Filter
-          </Button>
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-          <Button variant="gradient">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Product
-          </Button>
+          <Button variant="outline" onClick={() => setFilterDialogOpen(true)}><Filter className="h-4 w-4 mr-2" />Filter</Button>
+          <Button variant="outline" onClick={() => setExportDialogOpen(true)}><Download className="h-4 w-4 mr-2" />Export</Button>
+          <Button variant="gradient" onClick={() => setAddDialogOpen(true)}><Plus className="h-4 w-4 mr-2" />Add Product</Button>
         </div>
       </div>
 
-      {/* Category Pills */}
       <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
         {categories.map((category) => (
-          <button
-            key={category}
-            onClick={() => setSelectedCategory(category)}
-            className={cn(
-              "pill-filter whitespace-nowrap",
-              selectedCategory === category ? "pill-filter-active" : "pill-filter-inactive"
-            )}
-          >
-            {category}
-          </button>
+          <button key={category} onClick={() => { setSelectedCategory(category); setCurrentPage(1); }} className={cn("pill-filter whitespace-nowrap", selectedCategory === category ? "pill-filter-active" : "pill-filter-inactive")}>{category}</button>
         ))}
       </div>
 
-      {/* Products Table */}
       <div className="chart-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -106,43 +120,25 @@ const Inventory = () => {
                 <th className="text-left py-4 px-4 text-sm font-medium text-muted-foreground">Product</th>
                 <th className="text-left py-4 px-4 text-sm font-medium text-muted-foreground">Category</th>
                 <th className="text-left py-4 px-4 text-sm font-medium text-muted-foreground">Quantity</th>
+                <th className="text-left py-4 px-4 text-sm font-medium text-muted-foreground">Price</th>
                 <th className="text-left py-4 px-4 text-sm font-medium text-muted-foreground">Expiry Date</th>
                 <th className="text-left py-4 px-4 text-sm font-medium text-muted-foreground">Status</th>
                 <th className="text-right py-4 px-4 text-sm font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredProducts.map((product) => (
+              {paginatedProducts.map((product) => (
                 <tr key={product.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
-                  <td className="py-4 px-4">
-                    <span className="font-medium text-foreground">{product.name}</span>
-                  </td>
-                  <td className="py-4 px-4">
-                    <span className="text-sm text-muted-foreground">{product.category}</span>
-                  </td>
-                  <td className="py-4 px-4">
-                    <span className={cn(
-                      "font-medium",
-                      product.quantity === 0 ? "text-destructive" : 
-                      product.quantity < 25 ? "text-warning" : "text-foreground"
-                    )}>
-                      {product.quantity}
-                    </span>
-                  </td>
-                  <td className="py-4 px-4">
-                    <span className="text-sm text-muted-foreground">{product.expiry}</span>
-                  </td>
-                  <td className="py-4 px-4">
-                    {getStatusBadge(product.status)}
-                  </td>
+                  <td className="py-4 px-4"><span className="font-medium text-foreground">{product.name}</span></td>
+                  <td className="py-4 px-4"><span className="text-sm text-muted-foreground">{product.category}</span></td>
+                  <td className="py-4 px-4"><span className={cn("font-medium", product.quantity === 0 ? "text-destructive" : product.quantity < 20 ? "text-warning" : "text-foreground")}>{product.quantity}</span></td>
+                  <td className="py-4 px-4"><span className="font-medium text-foreground">₱{product.price.toFixed(2)}</span></td>
+                  <td className="py-4 px-4"><span className="text-sm text-muted-foreground">{product.expiry}</span></td>
+                  <td className="py-4 px-4">{getStatusBadge(product.status)}</td>
                   <td className="py-4 px-4">
                     <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setSelectedProduct(product); setEditDialogOpen(true); }}><Edit className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => { setSelectedProduct(product); setDeleteDialogOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </td>
                 </tr>
@@ -150,31 +146,23 @@ const Inventory = () => {
             </tbody>
           </table>
         </div>
-
-        {/* Pagination */}
         <div className="flex items-center justify-between px-4 py-4 border-t border-border">
-          <p className="text-sm text-muted-foreground">
-            Showing {filteredProducts.length} of {products.length} products
-          </p>
+          <p className="text-sm text-muted-foreground">Showing {paginatedProducts.length} of {filteredProducts.length} products</p>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="sm" className="bg-primary text-primary-foreground">
-              1
-            </Button>
-            <Button variant="outline" size="sm">
-              2
-            </Button>
-            <Button variant="outline" size="sm">
-              3
-            </Button>
-            <Button variant="outline" size="sm">
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+            <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}><ChevronLeft className="h-4 w-4" /></Button>
+            {Array.from({ length: Math.min(totalPages, 3) }, (_, i) => (
+              <Button key={i + 1} variant="outline" size="sm" className={currentPage === i + 1 ? "bg-primary text-primary-foreground" : ""} onClick={() => setCurrentPage(i + 1)}>{i + 1}</Button>
+            ))}
+            <Button variant="outline" size="sm" disabled={currentPage === totalPages || totalPages === 0} onClick={() => setCurrentPage(p => p + 1)}><ChevronRight className="h-4 w-4" /></Button>
           </div>
         </div>
       </div>
+
+      <AddProductDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} onAddProduct={handleAddProduct} />
+      <FilterDialog open={filterDialogOpen} onOpenChange={setFilterDialogOpen} filters={filters} onApplyFilters={setFilters} />
+      <ExportDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen} products={filteredProducts} />
+      <EditProductDialog open={editDialogOpen} onOpenChange={setEditDialogOpen} product={selectedProduct} onEditProduct={handleEditProduct} />
+      <DeleteConfirmDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} product={selectedProduct} onConfirm={handleDeleteProduct} />
     </MainLayout>
   );
 };

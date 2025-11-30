@@ -1,12 +1,11 @@
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 const data = [
-  { name: "Milk 1L", sales: 245 },
-  { name: "Bread", sales: 198 },
-  { name: "Eggs (12)", sales: 176 },
-  { name: "Cheese", sales: 154 },
-  { name: "Yogurt", sales: 132 },
-  { name: "Butter", sales: 118 },
+  { name: "NFA Rice 5kg", sales: 145, color: "hsl(var(--primary))" },
+  { name: "Lucky Me Pancit Canton", sales: 128, color: "hsl(var(--accent))" },
+  { name: "Argentina Corned Beef", sales: 96, color: "hsl(var(--success))" },
+  { name: "Bear Brand Milk", sales: 84, color: "hsl(var(--warning))" },
+  { name: "Coca-Cola 1.5L", sales: 72, color: "hsl(var(--chart-5))" },
 ];
 
 export function TopSellingChart() {
@@ -19,34 +18,32 @@ export function TopSellingChart() {
         </div>
       </div>
       
-      <div className="h-72">
+      <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} layout="vertical" margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+          <BarChart data={data} layout="vertical" margin={{ left: 0, right: 20 }}>
             <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="hsl(var(--border))" />
             <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
             <YAxis 
-              type="category" 
               dataKey="name" 
+              type="category" 
               axisLine={false} 
               tickLine={false} 
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-              width={80}
+              tick={{ fill: 'hsl(var(--foreground))', fontSize: 12 }}
+              width={150}
             />
             <Tooltip
               contentStyle={{
                 backgroundColor: 'hsl(var(--card))',
                 border: '1px solid hsl(var(--border))',
                 borderRadius: '8px',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
               }}
-              labelStyle={{ color: 'hsl(var(--foreground))' }}
+              formatter={(value) => [`${value} units`, 'Sales']}
             />
-            <Bar 
-              dataKey="sales" 
-              fill="hsl(var(--primary))" 
-              radius={[0, 6, 6, 0]}
-              barSize={24}
-            />
+            <Bar dataKey="sales" radius={[0, 4, 4, 0]}>
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
+              ))}
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
