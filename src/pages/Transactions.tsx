@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,19 +10,109 @@ import {
   Calendar
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const transactions = [
-  { id: 1, type: "sale", product: "Whole Milk 1L", quantity: 5, amount: 14.95, date: "2024-02-07 14:32", customer: "Walk-in" },
-  { id: 2, type: "purchase", product: "White Bread", quantity: 50, amount: 87.50, date: "2024-02-07 10:15", supplier: "Baker's Supply" },
-  { id: 3, type: "sale", product: "Free Range Eggs (12)", quantity: 3, amount: 17.97, date: "2024-02-07 09:45", customer: "John Smith" },
-  { id: 4, type: "sale", product: "Cheddar Cheese 500g", quantity: 2, amount: 15.98, date: "2024-02-06 16:20", customer: "Walk-in" },
-  { id: 5, type: "purchase", product: "Organic Bananas", quantity: 100, amount: 45.00, date: "2024-02-06 08:00", supplier: "Fresh Farms" },
-  { id: 6, type: "sale", product: "Chicken Breast 1kg", quantity: 4, amount: 47.96, date: "2024-02-05 15:10", customer: "Mary Johnson" },
-  { id: 7, type: "purchase", product: "Olive Oil 500ml", quantity: 24, amount: 143.76, date: "2024-02-05 11:30", supplier: "Mediterranean Imports" },
-  { id: 8, type: "sale", product: "Orange Juice 1L", quantity: 6, amount: 23.94, date: "2024-02-05 10:05", customer: "Walk-in" },
-];
+import { transactions as initialTransactions } from "@/data/products";
+import { toast } from "sonner";
 
 const Transactions = () => {
+  const [transactions] = useState(initialTransactions);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterType, setFilterType] = useState("All");
+
+  const filteredTransactions = transactions.filter(transaction => {
+    const matchesSearch = transaction.product.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesType = filterType === "All" || 
+      (filterType === "Sales" && transaction.type === "sale") ||
+      (filterType === "Purchases" && transaction.type === "purchase");
+    return matchesSearch && matchesType;
+  });
+
+  const totalSales = transactions.filter(t => t.type === "sale").reduce((sum, t) => sum + t.amount, 0);
+  const totalPurchases = transactions.filter(t => t.type === "purchase").reduce((sum, t) => sum + t.amount, 0);
+
+  const exportToCSV = () => {
+    const headers = ["ID", "Type", "Product", "Quantity", "Amount (PHP)", "Date", "Customer/Supplier"];
+    const csvContent = [
+      headers.join(","),
+      ...filteredTransactions.map(t => [
+        t.id,
+        t.type,
+        `"${t.product}"`,
+        t.quantity,
+        t.amount,
+        t.date,
+        `"${t.customer || t.supplier || ''}"`
+      ].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "transactions-export.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success("Exported to CSV successfully!");
+  };
+
+  const exportToPDF = () => {
+    // Create a simple HTML table for printing
+    const printContent = `
+      <html>
+        <head>
+          <title>Transactions Report - BAG-INVENT</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            h1 { color: #333; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+            th { background-color: #6366f1; color: white; }
+            tr:nth-child(even) { background-color: #f9f9f9; }
+            .sale { color: #22c55e; }
+            .purchase { color: #6366f1; }
+          </style>
+        </head>
+        <body>
+          <h1>Transactions Report</h1>
+          <p>Generated: ${new Date().toLocaleDateString()}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th>Amount</th>
+                <th>Date</th>
+                <th>Customer/Supplier</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredTransactions.map(t => `
+                <tr>
+                  <td class="${t.type}">${t.type === "sale" ? "Sale" : "Purchase"}</td>
+                  <td>${t.product}</td>
+                  <td>${t.quantity}</td>
+                  <td>₱${t.amount.toFixed(2)}</td>
+                  <td>${t.date}</td>
+                  <td>${t.customer || t.supplier || '-'}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.print();
+    }
+    toast.success("PDF export ready for printing!");
+  };
+
   return (
     <MainLayout title="Transactions" subtitle="Track all inventory movements">
       {/* Stats */}
@@ -33,7 +124,7 @@ const Transactions = () => {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Total Sales</p>
-              <p className="text-xl font-bold text-foreground">$4,829.50</p>
+              <p className="text-xl font-bold text-foreground">₱{totalSales.toLocaleString()}</p>
             </div>
           </div>
         </div>
@@ -44,7 +135,7 @@ const Transactions = () => {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Total Purchases</p>
-              <p className="text-xl font-bold text-foreground">$2,156.26</p>
+              <p className="text-xl font-bold text-foreground">₱{totalPurchases.toLocaleString()}</p>
             </div>
           </div>
         </div>
@@ -55,7 +146,7 @@ const Transactions = () => {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Transactions Today</p>
-              <p className="text-xl font-bold text-foreground">24</p>
+              <p className="text-xl font-bold text-foreground">{transactions.length}</p>
             </div>
           </div>
         </div>
@@ -68,6 +159,8 @@ const Transactions = () => {
           <Input 
             placeholder="Search transactions..." 
             className="pl-10"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
         <div className="flex gap-2">
@@ -75,11 +168,11 @@ const Transactions = () => {
             <Calendar className="h-4 w-4 mr-2" />
             Date Range
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={exportToPDF}>
             <Download className="h-4 w-4 mr-2" />
             Export PDF
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={exportToCSV}>
             <Download className="h-4 w-4 mr-2" />
             Export CSV
           </Button>
@@ -88,9 +181,18 @@ const Transactions = () => {
 
       {/* Transaction Type Pills */}
       <div className="flex gap-2 mb-6">
-        <button className="pill-filter pill-filter-active">All</button>
-        <button className="pill-filter pill-filter-inactive">Sales</button>
-        <button className="pill-filter pill-filter-inactive">Purchases</button>
+        {["All", "Sales", "Purchases"].map((type) => (
+          <button
+            key={type}
+            onClick={() => setFilterType(type)}
+            className={cn(
+              "pill-filter",
+              filterType === type ? "pill-filter-active" : "pill-filter-inactive"
+            )}
+          >
+            {type}
+          </button>
+        ))}
       </div>
 
       {/* Transactions Table */}
@@ -108,7 +210,7 @@ const Transactions = () => {
               </tr>
             </thead>
             <tbody>
-              {transactions.map((transaction) => (
+              {filteredTransactions.map((transaction) => (
                 <tr key={transaction.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
                   <td className="py-4 px-4">
                     <div className={cn(
@@ -136,7 +238,7 @@ const Transactions = () => {
                       "font-medium",
                       transaction.type === "sale" ? "text-success" : "text-foreground"
                     )}>
-                      ${transaction.amount.toFixed(2)}
+                      ₱{transaction.amount.toLocaleString()}
                     </span>
                   </td>
                   <td className="py-4 px-4">

@@ -26,85 +26,91 @@ import {
   Lightbulb
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { forecastData, wasteAlerts, insights, recommendations } from "@/data/products";
+import { toast } from "sonner";
 
-const forecastData = [
-  { day: "Day 1", predicted: 420, historical: 380 },
-  { day: "Day 5", predicted: 480, historical: 410 },
-  { day: "Day 10", predicted: 520, historical: 450 },
-  { day: "Day 15", predicted: 580, historical: 490 },
-  { day: "Day 20", predicted: 650, historical: 520 },
-  { day: "Day 25", predicted: 720, historical: 580 },
-  { day: "Day 30", predicted: 800, historical: 620 },
-];
-
-const categories = ["All Categories", "Dairy", "Produce", "Dry Goods", "Bakery", "Beverages"];
-
-const insights = [
-  { icon: TrendingUp, title: "Demand Increasing", description: "Dairy products expected to rise 15% next week", type: "positive" },
-  { icon: AlertTriangle, title: "Overstock Alert", description: "Olive oil inventory 40% above optimal", type: "warning" },
-  { icon: Clock, title: "Expiry Risk", description: "24 items expiring within 5 days", type: "danger" },
-];
-
-const wasteAlerts = [
-  { product: "Greek Yogurt", expiry: "2 days", quantity: 15, severity: "critical" },
-  { product: "Fresh Spinach", expiry: "3 days", quantity: 8, severity: "high" },
-  { product: "Whole Milk", expiry: "5 days", quantity: 23, severity: "medium" },
-  { product: "Sliced Bread", expiry: "4 days", quantity: 12, severity: "high" },
-];
-
-const recommendations = [
-  { icon: Package, title: "Restock Recommendation", description: "Order 50 units of Eggs (12-pack) by Thursday to meet weekend demand", priority: "high" },
-  { icon: TrendingDown, title: "Reduce Overstock", description: "Consider promotions on Olive Oil - 40% excess inventory", priority: "medium" },
-  { icon: ShoppingCart, title: "Promote Slow Movers", description: "Bundle Organic Yogurt with fruits - sales declined 20%", priority: "low" },
-];
+const categories = ["All Categories", "Rice & Grains", "Canned Goods", "Beverages", "Snacks", "Frozen"];
 
 const wastePrevention = [
-  { icon: Clock, title: "First-Expired-First-Out", description: "Rotate stock daily. Move older items to front displays." },
-  { icon: Zap, title: "Flash Discounts", description: "Apply 30% off to items expiring within 3 days." },
-  { icon: Recycle, title: "Staff Meals Program", description: "Use near-expiry items for staff meals to reduce waste." },
+  { icon: Clock, title: "First-Expired-First-Out", description: "I-rotate ang stock araw-araw. Ilagay sa harap ang mga malapit na mag-expire." },
+  { icon: Zap, title: "Flash Discounts", description: "Mag-apply ng 20-30% discount sa items na mag-e-expire within 3 days." },
+  { icon: Recycle, title: "Staff Meals Program", description: "Gamitin ang near-expiry items para sa staff meals or donations." },
 ];
+
+const iconMap = {
+  TrendingUp,
+  AlertTriangle,
+  Clock,
+};
+
+const recIconMap = {
+  Package,
+  TrendingDown,
+  ShoppingCart,
+};
 
 const Forecast = () => {
   const [selectedCategory, setSelectedCategory] = useState("All Categories");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [forecastGenerated, setForecastGenerated] = useState(false);
 
   const handleGenerate = () => {
     setIsGenerating(true);
-    setTimeout(() => setIsGenerating(false), 2000);
+    toast.loading("Generating AI forecast...", { id: "forecast" });
+    
+    setTimeout(() => {
+      setIsGenerating(false);
+      setForecastGenerated(true);
+      toast.success("AI forecast generated successfully!", { id: "forecast" });
+    }, 2500);
+  };
+
+  const getInsightIcon = (type: string) => {
+    if (type === "positive") return TrendingUp;
+    if (type === "warning") return AlertTriangle;
+    return Clock;
+  };
+
+  const getRecIcon = (index: number) => {
+    const icons = [Package, TrendingDown, ShoppingCart];
+    return icons[index] || Package;
   };
 
   return (
     <MainLayout title="AI Forecast" subtitle="Intelligent demand predictions & insights">
       {/* AI Insights Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        {insights.map((insight, index) => (
-          <div key={index} className={cn(
-            "stat-card border-l-4",
-            insight.type === "positive" && "border-l-success",
-            insight.type === "warning" && "border-l-warning",
-            insight.type === "danger" && "border-l-destructive"
-          )}>
-            <div className="flex items-start gap-3">
-              <div className={cn(
-                "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
-                insight.type === "positive" && "bg-success/10",
-                insight.type === "warning" && "bg-warning/10",
-                insight.type === "danger" && "bg-destructive/10"
-              )}>
-                <insight.icon className={cn(
-                  "h-5 w-5",
-                  insight.type === "positive" && "text-success",
-                  insight.type === "warning" && "text-warning",
-                  insight.type === "danger" && "text-destructive"
-                )} />
-              </div>
-              <div>
-                <h4 className="font-semibold text-foreground">{insight.title}</h4>
-                <p className="text-sm text-muted-foreground">{insight.description}</p>
+        {insights.map((insight, index) => {
+          const InsightIcon = getInsightIcon(insight.type);
+          return (
+            <div key={index} className={cn(
+              "stat-card border-l-4",
+              insight.type === "positive" && "border-l-success",
+              insight.type === "warning" && "border-l-warning",
+              insight.type === "danger" && "border-l-destructive"
+            )}>
+              <div className="flex items-start gap-3">
+                <div className={cn(
+                  "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
+                  insight.type === "positive" && "bg-success/10",
+                  insight.type === "warning" && "bg-warning/10",
+                  insight.type === "danger" && "bg-destructive/10"
+                )}>
+                  <InsightIcon className={cn(
+                    "h-5 w-5",
+                    insight.type === "positive" && "text-success",
+                    insight.type === "warning" && "text-warning",
+                    insight.type === "danger" && "text-destructive"
+                  )} />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-foreground">{insight.title}</h4>
+                  <p className="text-sm text-muted-foreground">{insight.description}</p>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Main Forecast Section */}
@@ -114,7 +120,7 @@ const Forecast = () => {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
             <div>
               <h3 className="text-lg font-semibold text-foreground">30-Day Demand Forecast</h3>
-              <p className="text-sm text-muted-foreground">AI-predicted vs historical average</p>
+              <p className="text-sm text-muted-foreground">AI-predicted vs historical average (in PHP)</p>
             </div>
             <Button 
               variant="gradient" 
@@ -151,13 +157,14 @@ const Forecast = () => {
               <LineChart data={forecastData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} tickFormatter={(value) => `₱${(value / 1000).toFixed(0)}k`} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: 'hsl(var(--card))',
                     border: '1px solid hsl(var(--border))',
                     borderRadius: '8px',
                   }}
+                  formatter={(value: number) => [`₱${value.toLocaleString()}`, '']}
                 />
                 <Legend />
                 <Line 
@@ -193,22 +200,22 @@ const Forecast = () => {
           <div className="space-y-6">
             <div className="p-4 rounded-lg bg-success/5 border border-success/20">
               <p className="text-sm text-muted-foreground">Weekly Growth</p>
-              <p className="text-2xl font-bold text-success">+12.5%</p>
+              <p className="text-2xl font-bold text-success">+15.2%</p>
             </div>
             
             <div>
               <p className="text-sm text-muted-foreground mb-1">Peak Hour</p>
-              <p className="text-lg font-semibold text-foreground">2:00 PM - 4:00 PM</p>
+              <p className="text-lg font-semibold text-foreground">5:00 PM - 7:00 PM</p>
             </div>
 
             <div>
               <p className="text-sm text-muted-foreground mb-1">Best Selling Day</p>
-              <p className="text-lg font-semibold text-foreground">Saturday</p>
+              <p className="text-lg font-semibold text-foreground">Sunday</p>
             </div>
 
             <div>
               <p className="text-sm text-muted-foreground mb-1">Average Basket Value</p>
-              <p className="text-lg font-semibold text-foreground">$34.50</p>
+              <p className="text-lg font-semibold text-foreground">₱285.50</p>
             </div>
           </div>
         </div>
@@ -259,29 +266,32 @@ const Forecast = () => {
           </div>
 
           <div className="space-y-4">
-            {recommendations.map((rec, index) => (
-              <div key={index} className="p-4 rounded-lg border border-border hover:border-primary/30 transition-colors">
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <rec.icon className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="text-sm font-semibold text-foreground">{rec.title}</h4>
-                      <span className={cn(
-                        "text-[10px] px-1.5 py-0.5 rounded-full uppercase font-medium",
-                        rec.priority === "high" && "bg-destructive/10 text-destructive",
-                        rec.priority === "medium" && "bg-warning/10 text-warning",
-                        rec.priority === "low" && "bg-success/10 text-success"
-                      )}>
-                        {rec.priority}
-                      </span>
+            {recommendations.map((rec, index) => {
+              const RecIcon = getRecIcon(index);
+              return (
+                <div key={index} className="p-4 rounded-lg border border-border hover:border-primary/30 transition-colors">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <RecIcon className="h-4 w-4 text-primary" />
                     </div>
-                    <p className="text-xs text-muted-foreground">{rec.description}</p>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="text-sm font-semibold text-foreground">{rec.title}</h4>
+                        <span className={cn(
+                          "text-[10px] px-1.5 py-0.5 rounded-full uppercase font-medium",
+                          rec.priority === "high" && "bg-destructive/10 text-destructive",
+                          rec.priority === "medium" && "bg-warning/10 text-warning",
+                          rec.priority === "low" && "bg-success/10 text-success"
+                        )}>
+                          {rec.priority}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{rec.description}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
