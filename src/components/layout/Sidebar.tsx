@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, 
   Package, 
@@ -8,11 +8,14 @@ import {
   Settings,
   LogOut,
   Menu,
-  X
+  X,
+  ShieldCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -24,7 +27,15 @@ const navItems = [
 
 export function Sidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user, signOut } = useAuth();
+
+  const handleLogout = async () => {
+    await signOut();
+    toast.success("Logged out successfully!");
+    navigate("/auth");
+  };
 
   return (
     <>
@@ -83,18 +94,44 @@ export function Sidebar() {
               </NavLink>
             );
           })}
+          
+          {/* Admin Link */}
+          <NavLink
+            to="/admin"
+            onClick={() => setMobileOpen(false)}
+            className={cn(
+              "nav-item",
+              location.pathname === "/admin" && "nav-item-active"
+            )}
+          >
+            <ShieldCheck className="h-5 w-5" />
+            <span>Admin</span>
+          </NavLink>
         </nav>
 
         {/* Bottom Section */}
         <div className="p-4 border-t border-sidebar-border space-y-1">
+          {user && (
+            <div className="px-3 py-2 mb-2">
+              <p className="text-xs text-muted-foreground">Signed in as</p>
+              <p className="text-sm font-medium text-foreground truncate">{user.email}</p>
+            </div>
+          )}
           <button className="nav-item w-full">
             <Settings className="h-5 w-5" />
             <span>Settings</span>
           </button>
-          <button className="nav-item w-full text-destructive hover:text-destructive">
-            <LogOut className="h-5 w-5" />
-            <span>Logout</span>
-          </button>
+          {user ? (
+            <button onClick={handleLogout} className="nav-item w-full text-destructive hover:text-destructive">
+              <LogOut className="h-5 w-5" />
+              <span>Logout</span>
+            </button>
+          ) : (
+            <NavLink to="/auth" onClick={() => setMobileOpen(false)} className="nav-item w-full">
+              <LogOut className="h-5 w-5" />
+              <span>Login</span>
+            </NavLink>
+          )}
         </div>
       </aside>
     </>
