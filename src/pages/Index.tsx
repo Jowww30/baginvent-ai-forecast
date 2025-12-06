@@ -4,37 +4,59 @@ import { TopSellingChart } from "@/components/dashboard/TopSellingChart";
 import { AIForecastCard } from "@/components/dashboard/AIForecastCard";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { Package, AlertTriangle, Clock, DollarSign } from "lucide-react";
+import { useProducts } from "@/hooks/useProducts";
+import { useTransactions } from "@/hooks/useTransactions";
 
 const Index = () => {
+  const { products } = useProducts();
+  const { getTodaysSales } = useTransactions();
+
+  const stats = {
+    totalProducts: products.length,
+    lowStock: products.filter(p => p.status === "low").length,
+    expiringSoon: products.filter(p => {
+      const expiry = new Date(p.expiry);
+      const today = new Date();
+      const diffDays = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      return diffDays <= 7 && diffDays > 0;
+    }).length,
+    todaysSales: getTodaysSales(),
+  };
+
+  const inStock = products.filter(p => p.status === "normal").length;
+  const lowStockCount = products.filter(p => p.status === "low").length;
+  const outOfStock = products.filter(p => p.status === "out").length;
+  const total = products.length || 1;
+
   return (
     <MainLayout title="Dashboard" subtitle="Welcome back! Here's your inventory overview.">
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard
           title="Total Products"
-          value="248"
-          change="+8% from last month"
+          value={stats.totalProducts.toString()}
+          change={`${products.length > 0 ? '+' : ''}${products.length} items`}
           changeType="positive"
           icon={Package}
         />
         <StatCard
           title="Low Stock Items"
-          value="15"
-          change="3 critical"
-          changeType="negative"
+          value={stats.lowStock.toString()}
+          change={`${stats.lowStock > 0 ? stats.lowStock + ' need attention' : 'All stocked'}`}
+          changeType={stats.lowStock > 0 ? "negative" : "positive"}
           icon={AlertTriangle}
         />
         <StatCard
           title="Expiring Soon"
-          value="12"
+          value={stats.expiringSoon.toString()}
           change="Within 7 days"
-          changeType="negative"
+          changeType={stats.expiringSoon > 0 ? "negative" : "positive"}
           icon={Clock}
         />
         <StatCard
           title="Today's Sales"
-          value="₱12,450"
-          change="+12% from yesterday"
+          value={`₱${stats.todaysSales.toLocaleString()}`}
+          change="Live tracking"
           changeType="positive"
           icon={DollarSign}
           variant="gradient"
@@ -65,27 +87,27 @@ const Index = () => {
               <span className="text-sm text-muted-foreground">In Stock</span>
               <div className="flex items-center gap-2">
                 <div className="w-32 h-2 bg-secondary rounded-full overflow-hidden">
-                  <div className="h-full w-[76%] bg-success rounded-full" />
+                  <div className="h-full bg-success rounded-full" style={{ width: `${(inStock / total) * 100}%` }} />
                 </div>
-                <span className="text-sm font-medium text-foreground">76%</span>
+                <span className="text-sm font-medium text-foreground">{Math.round((inStock / total) * 100)}%</span>
               </div>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Low Stock</span>
               <div className="flex items-center gap-2">
                 <div className="w-32 h-2 bg-secondary rounded-full overflow-hidden">
-                  <div className="h-full w-[16%] bg-warning rounded-full" />
+                  <div className="h-full bg-warning rounded-full" style={{ width: `${(lowStockCount / total) * 100}%` }} />
                 </div>
-                <span className="text-sm font-medium text-foreground">16%</span>
+                <span className="text-sm font-medium text-foreground">{Math.round((lowStockCount / total) * 100)}%</span>
               </div>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Out of Stock</span>
               <div className="flex items-center gap-2">
                 <div className="w-32 h-2 bg-secondary rounded-full overflow-hidden">
-                  <div className="h-full w-[8%] bg-destructive rounded-full" />
+                  <div className="h-full bg-destructive rounded-full" style={{ width: `${(outOfStock / total) * 100}%` }} />
                 </div>
-                <span className="text-sm font-medium text-foreground">8%</span>
+                <span className="text-sm font-medium text-foreground">{Math.round((outOfStock / total) * 100)}%</span>
               </div>
             </div>
           </div>
@@ -93,15 +115,15 @@ const Index = () => {
           <div className="mt-6 pt-6 border-t border-border">
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
-                <p className="text-2xl font-bold text-foreground">189</p>
+                <p className="text-2xl font-bold text-foreground">{inStock}</p>
                 <p className="text-xs text-muted-foreground">In Stock</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-warning">40</p>
+                <p className="text-2xl font-bold text-warning">{lowStockCount}</p>
                 <p className="text-xs text-muted-foreground">Low Stock</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-destructive">19</p>
+                <p className="text-2xl font-bold text-destructive">{outOfStock}</p>
                 <p className="text-xs text-muted-foreground">Out of Stock</p>
               </div>
             </div>
