@@ -17,8 +17,9 @@ const Index = () => {
     expiringSoon: products.filter(p => {
       const expiry = new Date(p.expiry);
       const today = new Date();
+      today.setHours(0, 0, 0, 0);
       const diffDays = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-      return diffDays <= 7 && diffDays > 0;
+      return diffDays >= 0 && diffDays <= 7;
     }).length,
     todaysSales: getTodaysSales(),
   };
