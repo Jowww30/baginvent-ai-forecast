@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      otp_codes: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          identifier: string
+          otp_hash: string
+          type: string
+          verified: boolean
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          identifier: string
+          otp_hash: string
+          type: string
+          verified?: boolean
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          identifier?: string
+          otp_hash?: string
+          type?: string
+          verified?: boolean
+        }
+        Relationships: []
+      }
       partner_settings: {
         Row: {
           created_at: string
@@ -160,6 +190,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_expired_otps: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
