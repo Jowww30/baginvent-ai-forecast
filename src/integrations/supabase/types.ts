@@ -14,8 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      partner_settings: {
+        Row: {
+          created_at: string
+          id: string
+          logo_url: string | null
+          partner_name: string
+          primary_color: string
+          secondary_color: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          partner_name?: string
+          primary_color?: string
+          secondary_color?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          partner_name?: string
+          primary_color?: string
+          secondary_color?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
+          brand: string | null
           category: string
           created_at: string
           expiry: string
@@ -27,6 +58,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          brand?: string | null
           category: string
           created_at?: string
           expiry: string
@@ -38,6 +70,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          brand?: string | null
           category?: string
           created_at?: string
           expiry?: string
@@ -136,7 +169,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "super_admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -264,7 +297,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "super_admin"],
     },
   },
 } as const
