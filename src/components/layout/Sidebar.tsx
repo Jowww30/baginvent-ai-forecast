@@ -22,7 +22,7 @@ const navItems = [
   { icon: Package, label: "Inventory", path: "/inventory" },
   { icon: ArrowLeftRight, label: "Transactions", path: "/transactions" },
   { icon: FileBarChart, label: "Reports", path: "/reports" },
-  { icon: Brain, label: "Forecast", path: "/forecast" },
+  { icon: Brain, label: "AI Forecast", path: "/forecast" },
 ];
 
 export function Sidebar() {
@@ -59,12 +59,24 @@ export function Sidebar() {
 
       {/* Sidebar */}
       <aside className={cn(
-        "fixed left-0 top-0 h-full w-56 bg-sidebar-background z-50 flex flex-col transition-transform duration-300 lg:translate-x-0",
+        "fixed left-0 top-0 h-full w-64 bg-sidebar-background border-r border-sidebar-border z-50 flex flex-col transition-transform duration-300 lg:translate-x-0",
         mobileOpen ? "translate-x-0" : "-translate-x-full"
       )}>
-        {/* Navigation */}
+        {/* Logo */}
+        <div className="p-6 border-b border-sidebar-border">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-sidebar-primary flex items-center justify-center">
+              <span className="text-xl">🍓</span>
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-sidebar-foreground">Walang's</h1>
+              <p className="text-xs text-sidebar-foreground/70">Consumer Goods</p>
+            </div>
+          </div>
+        </div>
 
-        <nav className="flex-1 p-3 pt-4 space-y-0.5">
+        {/* Navigation */}
+        <nav className="flex-1 p-4 space-y-1">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
@@ -77,21 +89,13 @@ export function Sidebar() {
                   isActive && "nav-item-active"
                 )}
               >
-                <item.icon className="h-4 w-4" />
-                <span className="text-sm">{item.label}</span>
+                <item.icon className="h-5 w-5" />
+                <span>{item.label}</span>
               </NavLink>
             );
           })}
-        </nav>
-
-        {/* Bottom Section */}
-        <div className="p-3 border-t border-sidebar-border space-y-0.5">
-          {user && (
-            <div className="px-4 py-2 mb-1">
-              <p className="text-xs text-sidebar-foreground/50">Signed in as</p>
-              <p className="text-sm font-medium text-sidebar-foreground truncate">{user.email}</p>
-            </div>
-          )}
+          
+          {/* Admin Link */}
           <NavLink
             to="/admin"
             onClick={() => setMobileOpen(false)}
@@ -100,22 +104,32 @@ export function Sidebar() {
               location.pathname === "/admin" && "nav-item-active"
             )}
           >
-            <ShieldCheck className="h-4 w-4" />
-            <span className="text-sm">Admin</span>
+            <ShieldCheck className="h-5 w-5" />
+            <span>Admin</span>
           </NavLink>
-          <button className="nav-item w-full">
-            <Settings className="h-4 w-4" />
-            <span className="text-sm">Settings</span>
+        </nav>
+
+        {/* Bottom Section */}
+        <div className="p-4 border-t border-sidebar-border space-y-1">
+          {user && (
+            <div className="px-3 py-2 mb-2">
+              <p className="text-xs text-sidebar-foreground/70">Signed in as</p>
+              <p className="text-sm font-medium text-sidebar-foreground truncate">{user.email}</p>
+            </div>
+          )}
+          <button className="nav-item w-full text-sidebar-foreground hover:bg-sidebar-accent">
+            <Settings className="h-5 w-5" />
+            <span>Settings</span>
           </button>
           {user ? (
-            <button onClick={handleLogout} className="nav-item w-full">
-              <LogOut className="h-4 w-4" />
-              <span className="text-sm">Logout</span>
+            <button onClick={handleLogout} className="nav-item w-full text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground">
+              <LogOut className="h-5 w-5" />
+              <span>Logout</span>
             </button>
           ) : (
-            <NavLink to="/auth" onClick={() => setMobileOpen(false)} className="nav-item w-full">
-              <LogOut className="h-4 w-4" />
-              <span className="text-sm">Login</span>
+            <NavLink to="/auth" onClick={() => setMobileOpen(false)} className="nav-item w-full text-sidebar-foreground hover:bg-sidebar-accent">
+              <LogOut className="h-5 w-5" />
+              <span>Login</span>
             </NavLink>
           )}
         </div>
