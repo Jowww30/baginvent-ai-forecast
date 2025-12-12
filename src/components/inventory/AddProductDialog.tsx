@@ -33,11 +33,19 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
   const [price, setPrice] = useState("");
   const [expiry, setExpiry] = useState("");
 
+  const today = new Date().toISOString().split('T')[0];
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!name || !category || !quantity || !price || !expiry) {
       toast.error("Please fill in all fields");
+      return;
+    }
+
+    // Validate expiry date is not in the past
+    if (expiry < today) {
+      toast.error("Expiry date cannot be in the past");
       return;
     }
 
@@ -122,9 +130,11 @@ export function AddProductDialog({ open, onOpenChange, onAddProduct }: AddProduc
               <Input
                 id="expiry"
                 type="date"
+                min={today}
                 value={expiry}
                 onChange={(e) => setExpiry(e.target.value)}
               />
+              <p className="text-xs text-muted-foreground">Cannot be in the past</p>
             </div>
           </div>
           <DialogFooter>

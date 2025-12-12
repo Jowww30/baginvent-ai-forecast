@@ -11,6 +11,8 @@ import Reports from "./pages/Reports";
 import Forecast from "./pages/Forecast";
 import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
+import OTPVerification from "./pages/OTPVerification";
+import Sales from "./pages/Sales";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +32,8 @@ const App = () => (
             <Route path="/forecast" element={<Forecast />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/verify-otp" element={<OTPVerification />} />
+            <Route path="/sales" element={<Sales />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

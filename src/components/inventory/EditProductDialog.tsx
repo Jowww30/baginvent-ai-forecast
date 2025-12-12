@@ -44,11 +44,19 @@ export function EditProductDialog({ open, onOpenChange, product, onEditProduct }
     }
   }, [product]);
 
+  const today = new Date().toISOString().split('T')[0];
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!product || !name || !category || !quantity || !price || !expiry) {
       toast.error("Please fill in all fields");
+      return;
+    }
+
+    // Validate expiry date is not in the past
+    if (expiry < today) {
+      toast.error("Expiry date cannot be in the past");
       return;
     }
 
@@ -131,9 +139,11 @@ export function EditProductDialog({ open, onOpenChange, product, onEditProduct }
               <Input
                 id="edit-expiry"
                 type="date"
+                min={today}
                 value={expiry}
                 onChange={(e) => setExpiry(e.target.value)}
               />
+              <p className="text-xs text-muted-foreground">Cannot be in the past</p>
             </div>
           </div>
           <DialogFooter>

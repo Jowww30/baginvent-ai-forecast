@@ -9,7 +9,8 @@ import {
   LogOut,
   Menu,
   X,
-  ShieldCheck
+  ShieldCheck,
+  ShoppingCart
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -20,6 +21,7 @@ import { toast } from "sonner";
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
   { icon: Package, label: "Inventory", path: "/inventory" },
+  { icon: ShoppingCart, label: "Sales (POS)", path: "/sales" },
   { icon: ArrowLeftRight, label: "Transactions", path: "/transactions" },
   { icon: FileBarChart, label: "Reports", path: "/reports" },
   { icon: Brain, label: "AI Forecast", path: "/forecast" },

@@ -89,6 +89,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setSession(null);
     setIsAdmin(false);
+    // Clear OTP verification status
+    sessionStorage.removeItem("otp_verified");
+    sessionStorage.removeItem("otp_verified_email");
+    // Clear browser history and prevent back button access
+    window.history.replaceState(null, '', '/auth');
+    window.location.replace('/auth');
   };
 
   return (

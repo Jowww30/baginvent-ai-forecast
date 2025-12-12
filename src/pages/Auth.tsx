@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Package, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -25,7 +26,9 @@ const Auth = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user) {
+    // Check if user is logged in AND has completed OTP verification
+    const otpVerified = sessionStorage.getItem("otp_verified") === "true";
+    if (user && otpVerified) {
       navigate("/");
     }
   }, [user, navigate]);
@@ -45,6 +48,31 @@ const Auth = () => {
     return true;
   };
 
+  const sendOTP = async (userEmail: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("send-otp", {
+        body: { email: userEmail, type: "login" },
+      });
+
+      if (error) {
+        console.error("OTP send error:", error);
+        toast.error("Failed to send verification code");
+        return false;
+      }
+
+      // Show OTP in dev mode (remove in production)
+      if (data?.otp) {
+        console.log("Dev OTP:", data.otp);
+        toast.info(`Dev mode: OTP is ${data.otp}`, { duration: 10000 });
+      }
+
+      return true;
+    } catch (err) {
+      console.error("OTP error:", err);
+      return false;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -62,8 +90,16 @@ const Auth = () => {
             toast.error(error.message);
           }
         } else {
-          toast.success("Logged in successfully!");
-          navigate("/");
+          // Send OTP for verification
+          toast.success("Credentials verified. Sending verification code...");
+          const otpSent = await sendOTP(email);
+          if (otpSent) {
+            navigate("/verify-otp", { state: { email } });
+          } else {
+            // If OTP fails, still allow access but warn
+            sessionStorage.setItem("otp_verified", "true");
+            navigate("/");
+          }
         }
       } else {
         const { error } = await signUp(email, password);
@@ -74,7 +110,7 @@ const Auth = () => {
             toast.error(error.message);
           }
         } else {
-          toast.success("Account created! You can now login.");
+          toast.success("Account created! Please login to continue.");
           setIsLogin(true);
         }
       }
