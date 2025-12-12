@@ -15,8 +15,8 @@ const emailAuthSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters").max(72, "Password too long"),
 });
 
-const phoneSchema = z.object({
-  phone: z.string().regex(/^\+[1-9]\d{1,14}$/, "Enter phone in format: +1234567890"),
+const phPhoneSchema = z.object({
+  phone: z.string().regex(/^\+639\d{9}$/, "Enter PH phone: +63 9XXXXXXXXX"),
 });
 
 type AuthMethod = "email-password" | "email-otp" | "phone-otp";
@@ -76,7 +76,9 @@ const Auth = () => {
   };
 
   const validatePhone = () => {
-    const result = phoneSchema.safeParse({ phone });
+    // Remove spaces for validation
+    const cleanPhone = phone.replace(/\s/g, "");
+    const result = phPhoneSchema.safeParse({ phone: cleanPhone });
     if (!result.success) {
       setErrors({ phone: result.error.errors[0].message });
       return false;
@@ -127,19 +129,18 @@ const Auth = () => {
     setIsSubmitting(true);
 
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          shouldCreateUser: !isLogin,
-        },
+      const { error } = await supabase.functions.invoke("send-email-otp", {
+        body: { email },
       });
 
       if (error) {
-        toast.error(error.message);
+        toast.error(error.message || "Failed to send verification code");
       } else {
-        toast.success("Check your email for the verification code!");
+        toast.success("Verification code sent to your email!");
         setAuthStep("verify");
       }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send verification code");
     } finally {
       setIsSubmitting(false);
     }
@@ -151,19 +152,19 @@ const Auth = () => {
     setIsSubmitting(true);
 
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        phone,
-        options: {
-          shouldCreateUser: !isLogin,
-        },
+      const cleanPhone = phone.replace(/\s/g, "");
+      const { error } = await supabase.functions.invoke("send-sms-otp", {
+        body: { phone: cleanPhone },
       });
 
       if (error) {
-        toast.error(error.message);
+        toast.error(error.message || "Failed to send verification code");
       } else {
-        toast.success("Check your phone for the verification code!");
+        toast.success("Verification code sent to your phone!");
         setAuthStep("verify");
       }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send verification code");
     } finally {
       setIsSubmitting(false);
     }
@@ -178,18 +179,23 @@ const Auth = () => {
     setIsSubmitting(true);
 
     try {
-      const verifyPayload = authMethod === "email-otp" 
-        ? { email, token: otp, type: "email" as const }
-        : { phone, token: otp, type: "sms" as const };
+      const identifier = authMethod === "email-otp" ? email : phone.replace(/\s/g, "");
+      const type = authMethod === "email-otp" ? "email" : "phone";
 
-      const { error } = await supabase.auth.verifyOtp(verifyPayload);
+      const { data, error } = await supabase.functions.invoke("verify-otp", {
+        body: { identifier, otp, type },
+      });
 
-      if (error) {
-        toast.error(error.message);
+      if (error || !data?.success) {
+        toast.error(error?.message || data?.error || "Invalid verification code");
       } else {
-        toast.success("Verified successfully!");
+        toast.success("Verified successfully! Signing you in...");
+        // Refresh session after verification
+        await supabase.auth.refreshSession();
         navigate("/");
       }
+    } catch (err: any) {
+      toast.error(err.message || "Verification failed");
     } finally {
       setIsSubmitting(false);
     }
@@ -435,7 +441,7 @@ const Auth = () => {
                     </div>
                     {errors.phone && <p className="text-sm text-destructive">{errors.phone}</p>}
                     <p className="text-xs text-muted-foreground">
-                      Enter phone with country code (e.g., +1 for US)
+                      Philippine format: +63 9XXXXXXXXX
                     </p>
                   </div>
 

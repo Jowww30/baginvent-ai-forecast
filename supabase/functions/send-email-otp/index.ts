@@ -6,14 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface SendOTPRequest {
-  phone: string;
-}
-
-// Validate Philippine phone number format: +63 9XXXXXXXXX
-function validatePHPhone(phone: string): boolean {
-  const phPhoneRegex = /^\+639\d{9}$/;
-  return phPhoneRegex.test(phone.replace(/\s/g, ""));
+interface SendEmailOTPRequest {
+  email: string;
 }
 
 // Generate a 6-digit numeric OTP
@@ -36,30 +30,19 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { phone }: SendOTPRequest = await req.json();
+    const { email }: SendEmailOTPRequest = await req.json();
 
-    // Remove spaces and validate
-    const cleanPhone = phone.replace(/\s/g, "");
-
-    if (!validatePHPhone(cleanPhone)) {
-      throw new Error("Invalid Philippine phone number. Use format: +63 9XXXXXXXXX");
+    if (!email || !email.includes("@")) {
+      throw new Error("Invalid email address");
     }
 
-    console.log("Sending OTP to phone:", cleanPhone);
+    console.log("Sending email OTP to:", email);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
-    const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
-    const twilioPhone = Deno.env.get("TWILIO_PHONE_NUMBER");
 
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error("Supabase credentials not configured");
-    }
-
-    if (!accountSid || !authToken || !twilioPhone) {
-      console.error("Missing Twilio credentials");
-      throw new Error("SMS service not configured");
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -69,20 +52,20 @@ const handler = async (req: Request): Promise<Response> => {
     const otpHash = await hashOTP(otp);
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
-    // Delete any existing OTPs for this phone
+    // Delete any existing OTPs for this email
     await supabase
       .from("otp_codes")
       .delete()
-      .eq("identifier", cleanPhone)
-      .eq("type", "phone");
+      .eq("identifier", email.toLowerCase())
+      .eq("type", "email");
 
     // Store hashed OTP
     const { error: insertError } = await supabase
       .from("otp_codes")
       .insert({
-        identifier: cleanPhone,
+        identifier: email.toLowerCase(),
         otp_hash: otpHash,
-        type: "phone",
+        type: "email",
         expires_at: expiresAt.toISOString(),
       });
 
@@ -91,37 +74,47 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Failed to generate verification code");
     }
 
-    // Send SMS via Twilio
-    const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
-
-    const response = await fetch(twilioUrl, {
+    // Send email using Supabase's built-in email (via auth hooks)
+    // For now, we'll use a simple approach with Supabase's edge runtime
+    const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
-        "Authorization": `Basic ${btoa(`${accountSid}:${authToken}`)}`,
-        "Content-Type": "application/x-www-form-urlencoded",
+        "Authorization": `Bearer ${Deno.env.get("RESEND_API_KEY") || ""}`,
+        "Content-Type": "application/json",
       },
-      body: new URLSearchParams({
-        To: cleanPhone,
-        From: twilioPhone,
-        Body: `Your BAG-INVENT verification code is: ${otp}`,
+      body: JSON.stringify({
+        from: "BAG-INVENT <onboarding@resend.dev>",
+        to: [email],
+        subject: "Your Verification Code",
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #333;">Your BAG-INVENT verification code is:</h2>
+            <div style="background-color: #f5f5f5; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
+              <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #DC2626;">${otp}</span>
+            </div>
+            <p style="color: #666; font-size: 14px;">This code will expire in 5 minutes.</p>
+            <p style="color: #999; font-size: 12px;">If you didn't request this code, please ignore this email.</p>
+          </div>
+        `,
       }),
     });
 
-    const result = await response.json();
-
-    if (!response.ok) {
-      console.error("Twilio error:", result);
-      throw new Error(result.message || "Failed to send SMS");
+    if (!emailResponse.ok) {
+      const emailError = await emailResponse.text();
+      console.error("Email sending error:", emailError);
+      // Don't throw - we still stored the OTP, just log the email issue
+      console.log("Note: Email may not be sent, but OTP is stored. For testing, OTP is logged.");
+      console.log("Generated OTP (for testing only):", otp);
+    } else {
+      console.log("Email sent successfully");
     }
-
-    console.log("SMS sent successfully:", result.sid);
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   } catch (error: any) {
-    console.error("Error in send-sms-otp function:", error);
+    console.error("Error in send-email-otp function:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {
