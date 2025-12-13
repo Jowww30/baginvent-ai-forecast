@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProducts, DbProduct } from "@/hooks/useProducts";
 import { useTransactions } from "@/hooks/useTransactions";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Search, 
   Plus, 
@@ -15,7 +16,9 @@ import {
   DollarSign, 
   AlertTriangle,
   LogOut,
-  ShieldCheck
+  ShieldCheck,
+  Users,
+  Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { categories } from "@/data/products";
@@ -35,6 +38,7 @@ const Admin = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<DbProduct | null>(null);
+  const [isMigrating, setIsMigrating] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -46,6 +50,33 @@ const Admin = () => {
     await signOut();
     toast.success("Logged out successfully!");
     navigate("/auth");
+  };
+
+  const handleMigrateProfiles = async () => {
+    setIsMigrating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('migrate-profiles');
+      
+      if (error) {
+        console.error("Migration error:", error);
+        toast.error(`Migration failed: ${error.message}`);
+        return;
+      }
+
+      if (data.success) {
+        toast.success(`Migration complete! Migrated ${data.migrated} profiles.`);
+        if (data.errors > 0) {
+          toast.warning(`${data.errors} profiles had errors during migration.`);
+        }
+      } else {
+        toast.error(`Migration failed: ${data.error}`);
+      }
+    } catch (error) {
+      console.error("Migration error:", error);
+      toast.error("Failed to run migration");
+    } finally {
+      setIsMigrating(false);
+    }
   };
 
   const handleAddProduct = async (newProduct: { name: string; category: string; quantity: number; price: number; expiry: string }) => {
@@ -127,10 +158,26 @@ const Admin = () => {
             <p className="font-medium text-foreground">{user?.email}</p>
           </div>
         </div>
-        <Button variant="destructive" onClick={handleLogout}>
-          <LogOut className="h-4 w-4 mr-2" />
-          Logout
-        </Button>
+        <div className="flex gap-2">
+          {isAdmin && (
+            <Button 
+              variant="outline" 
+              onClick={handleMigrateProfiles}
+              disabled={isMigrating}
+            >
+              {isMigrating ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Users className="h-4 w-4 mr-2" />
+              )}
+              Migrate Profiles
+            </Button>
+          )}
+          <Button variant="destructive" onClick={handleLogout}>
+            <LogOut className="h-4 w-4 mr-2" />
+            Logout
+          </Button>
+        </div>
       </div>
 
       {/* Stats Grid */}
