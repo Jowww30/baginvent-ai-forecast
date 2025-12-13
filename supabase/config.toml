@@ -1,1 +1,10 @@
 project_id = "qixhbsdtdxvnqgxmhexh"
+
+[functions.send-otp]
+verify_jwt = false
+
+[functions.verify-otp]
+verify_jwt = false
+
+[functions.migrate-profiles]
+verify_jwt = false
